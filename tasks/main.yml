@@ -1,52 +1,58 @@
 ---
-- name: Install and configure SteamCMD
-  block:
-    - name: Add Steam system user
-      ansible.builtin.user:
-        name: "{{ steamcmd_user }}"
-        system: true
-        shell: /bin/bash
-        comment: "Steam user"
-        create_home: true
-        home: "{{ steamcmd_user_home }}"
-        password_lock: true
+- name: Add Steam system user
+  ansible.builtin.user:
+    name: "{{ steamcmd_user }}"
+    system: true
+    shell: /bin/bash
+    comment: "Steam user"
+    create_home: true
+    home: "{{ steamcmd_user_home }}"
+    password_lock: true
 
-    - name: Ensure non-free Debian repository is enabled
-      ansible.builtin.apt_repository:
-        repo: deb http://deb.debian.org/debian {{ ansible_distribution_release }} non-free
-        state: present
-      register: update_apt
-      when: ansible_distribution == "Debian"
+- name: Ensure non-free Debian repository is enabled
+  ansible.builtin.deb822_repository:
+    name: debian
+    types: deb
+    uris: http://deb.debian.org/debian
+    suites: "{{ ansible_facts['distribution_release'] }}"
+    components:
+      - main
+      - contrib
+      - non-free
+    install_python_debian: true
 
-    - name: Ensure architecture i386 is enabled
-      ansible.builtin.command: dpkg --add-architecture i386
-      when: ansible_userspace_architecture == "x86_64"
-      register: update_arch
-      changed_when: false
+- name: Get enabled foreign architectures
+  ansible.builtin.command:
+    cmd: dpkg --print-foreign-architectures
+  register: dpkg_foreign_architectures
+  changed_when: false
+  when: ansible_facts["userspace_architecture"] == "x86_64"
 
-    - name: Update package list
-      ansible.builtin.apt:
-        update_cache: true
-      when:
-        - update_apt is defined
-        - update_apt.changed
+- name: Ensure i386 architecture is enabled
+  ansible.builtin.command:
+    cmd: dpkg --add-architecture i386
+  when:
+    - ansible_facts["userspace_architecture"] == "x86_64"
+    - "'i386' not in dpkg_foreign_architectures.stdout_lines"
+  changed_when: true
 
-    - name: Interactive step one
-      ansible.builtin.debconf:
-        name: steamcmd
-        question: steam/question
-        value: 'I AGREE'
-        vtype: select
+- name: Interactive step one
+  ansible.builtin.debconf:
+    name: steamcmd
+    question: steam/question
+    value: 'I AGREE'
+    vtype: select
 
-    - name: Interactive step two
-      ansible.builtin.debconf:
-        name: steamcmd
-        question: steam/license
-        value: ''
-        vtype: note
+- name: Interactive step two
+  ansible.builtin.debconf:
+    name: steamcmd
+    question: steam/license
+    value: ''
+    vtype: note
 
-    - name: Install packages
-      ansible.builtin.apt:
-        name: steamcmd:i386
-        state: present
-        install_recommends: true
+- name: Install packages
+  ansible.builtin.apt:
+    name: steamcmd:i386
+    state: present
+    install_recommends: true
+    update_cache: true

@@ -1,16 +1,20 @@
 ---
-dependencies: []
-
 galaxy_info:
-  author: kirill-shtrykov
   role_name: steamcmd
-  description: Ansible role installs and configures The Steam Console Client
+  description: Ansible role to install and configure The Steam Console Client.
+  author: kirill-shtrykov
   license: MIT
-  min_ansible_version: 2.17.5
+
+  min_ansible_version: "2.21"
+
   platforms:
     - name: Debian
       versions:
-        - bookworm    # 12
+        - bookworm  # 12
+        - trixie    # 13
+
   galaxy_tags:
     - linux
     - steam
+
+dependencies: []
